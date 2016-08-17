@@ -1,0 +1,15 @@
+
+# Folder containing ffmpeg and ffprobe
+ffmpeg_dir:
+  mac: /EEP/Tools/Settings/shotgun/bolden_kkdev/install/core/resources/ffmpeg/darwin
+  win: //gin.eep.com/Tools/Settings/shotgun/bolden_kkdev/install/core/resources/ffmpeg/win32
+  linux: /EEP/Tools/Settings/shotgun/bolden_kkdev/install/core/resources/ffmpeg/linux2
+
+# Supported video files extensions
+video_files_formats: ['mov', 'mp4', 'mkv']
+
+# Regular expression partern to use
+# for retriving version number from a file name
+versions_regex:
+  - '(v)(?P<version_number>[0-9]+)' # v001
+  - '([A-Za-z]+)_(?P<version_number>[0-9]+)' # name_01

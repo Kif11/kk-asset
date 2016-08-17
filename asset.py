@@ -5,6 +5,7 @@ from logger import Logger
 from errors import *
 
 import subprocess
+import yaml
 import shutil
 import json
 import sys
@@ -14,7 +15,23 @@ import re
 log = Logger(debug=True)
 
 ################################################################################
-# Factory methods
+# Configuration
+################################################################################
+
+global config # Module configuration from config.yml
+
+script_dir = os.path.dirname(os.path.realpath(__file__))
+config_file = Path(script_dir, 'config.yml')
+
+# Read the module configuration
+with config_file.open('r') as f:
+    config = yaml.load(f)
+
+# Cache some configuration variables
+video_files_formats = config['video_files_formats']
+
+################################################################################
+# Factory functions
 ################################################################################
 
 def asset_from_path(path):
@@ -34,7 +51,7 @@ def asset_from_path(path):
 
     if path.is_dir():
         asset = ImageSequence(path)
-    elif path.suffix in ['.mov', 'mp4']:
+    elif path.suffix.lstrip('.') in video_files_formats:
         asset = VideoFile(path)
     elif path.is_file():
         asset = LocalFile(path)
@@ -45,38 +62,47 @@ def asset_from_path(path):
     return asset
 
 ################################################################################
-# Classes implementation
+# Classes
 ################################################################################
 
 class Asset(object):
     """
+    Base class for all of the local assets
     Do not instanciate directly. Use factory methods such as asset_from_path.
     """
     def __init__(self, path):
+
         path = Path(path)
+        platform = {"linux2": "linux", "darwin": "mac", "win32": "windows"}[sys.platform]
+        print '[D] Platform: ', platform
+
         if not path.exists():
             raise Exception('Specified path does not exist: %s' % path)
         self._path = path
-        self.version_patterns = [
-            r'(v)(?P<version_number>[0-9]+)', # v001
-            r'([A-Za-z]+)_(?P<version_number>[0-9]+)' # name_01
-        ]
 
-        # Get path to ffmpeg
-        ffmpeg_location = os.environ.get('FFMPEG_DIR')
+        # Regular expression partern to use
+        # for retriving version number from a file name
+        self.version_patterns = config['versions_regex']
 
-        if ffmpeg_location is not None:
-            if sys.platform == 'darwin':
-                self._ffmpeg = Path(ffmpeg_location, 'ffmpeg')
-                self._ffprobe = Path(ffmpeg_location, 'ffprobe')
-            elif sys.platform == 'win32':
-                self._ffmpeg = Path(ffmpeg_location, 'ffmpeg.exe')
-                self._ffprobe = Path(ffmpeg_location, 'ffprobe.exe')
+        # Determine ffmpeg and ffprobe paths
+        ffmpeg_dir = os.environ.get('FFMPEG_DIR')
+
+        if os.environ.get('FFMPEG_DIR') is not None:
+            # From the environmental variable
+            ffmpeg_dir = os.environ.get('FFMPEG_DIR')
+        elif config['ffmpeg_dir'][platform] is not None:
+            # From configuration file
+            ffmpeg_dir = config['ffmpeg_dir'][platform]
         else:
+            ffmpeg_dir = ''
             log.warning(
-                'FFMPEG_DIR environmental variable is not set. '
                 'Can not determine ffmpeg path.'
+                'Please set FFMPEG_DIR environmental variable '
+                'or specify path in the config.yml'
             )
+
+        self._ffmpeg = Path(ffmpeg_dir, 'ffmpeg')
+        self._ffprobe = Path(ffmpeg_dir, 'ffprobe')
 
     @property
     def type(self):
@@ -190,9 +216,9 @@ class Asset(object):
         shutil.copy(str(self.path), str(dst))
 
 
-
 class ImageSequence(Asset):
     """
+    Repreresent any image or file sequence
     Do not instanciate directly. Use factory methods such as asset_from_path.
     """
 
@@ -219,7 +245,6 @@ class ImageSequence(Asset):
             raise InvalidSequenceError('Multiple file sequences error!')
         elif len(seqs) == 0:
             raise InvalidSequenceError('No sequences found in the folder %s' % path)
-
 
     @property
     def base_name(self):
@@ -259,25 +284,6 @@ class ImageSequence(Asset):
             path.parent.mkdir()
 
         return path
-
-    # def resolution(self):
-    #
-    #     tmp_file = self._get_temp_file_path()
-    #
-    #     log.info('Extracting image resolution...')
-    #
-    #     first_frame_path = self.seq.frame(self.seq.start())
-    #
-    #     self.nkcmd.get_image_info(first_frame_path, tmp_file)
-    #
-    #     with tmp_file.open('r') as f:
-    #         data = json.load(f)
-    #     tmp_file.unlink() # Remove file
-    #
-    #     if data.get('width') is None or data.get('height') is None:
-    #         raise Exception('Nuke returned None for one of the resolution parameters')
-    #
-    #     return data.get('width'), data.get('height')
 
     def resolution(self):
         data = self.get_media_info(str(self.frame_path(self.start)))
@@ -346,7 +352,7 @@ class ImageSequence(Asset):
             sys.stdout.flush()
 
             old_frame += 1
-        print
+        print # Empty line
 
     def generate_mov(self, output, width='', height='', lut='', user='', handles='', description=''):
 
@@ -393,12 +399,6 @@ class ImageSequence(Asset):
 
         nkcmd = NukeCmd()
 
-        # proxy_dir_name = Path('%sx%s' %(proxy_seq_res_x, proxy_seq_res_y))
-        # proxy_dir_path = dir_path / proxy_dir_name
-        # pseq.setDirname(str(proxy_dir_path) + '/')
-        # pseq.setExtension('.dpx')
-        # proxy_output_dpx = Path(pseq.path())
-        # proxy_version_code = pseq.basename().rstrip('._')
         output = Path(output)
 
         if not output.parent.exists():
@@ -422,11 +422,18 @@ class ImageSequence(Asset):
         return asset
 
 class LocalFile(Asset):
+    """
+    Represent a local file that wont encompassed by other
+    more specific classes
+    """
 
     def __init__(self, path):
         super(self.__class__, self).__init__(path)
 
 class VideoFile(Asset):
+    """
+    Represent a local video file
+    """
 
     def __init__(self, path):
         super(self.__class__, self).__init__(path)
