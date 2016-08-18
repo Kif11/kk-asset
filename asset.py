@@ -73,8 +73,7 @@ class Asset(object):
     def __init__(self, path):
 
         path = Path(path)
-        platform = {"linux2": "linux", "darwin": "mac", "win32": "windows"}[sys.platform]
-        print '[D] Platform: ', platform
+        platform = {'linux2': 'linux', 'darwin': 'mac', 'win32': 'win'}[sys.platform]
 
         if not path.exists():
             raise Exception('Specified path does not exist: %s' % path)
