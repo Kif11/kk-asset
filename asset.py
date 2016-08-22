@@ -353,7 +353,7 @@ class ImageSequence(Asset):
             old_frame += 1
         print # Empty line
 
-    def generate_mov(self, output, width='', height='', lut='', user='', handles='', description=''):
+    def generate_mov(self, output, mov_type, width='', height='', lut='', user='', handles='', description=''):
 
         nkcmd = NukeCmd()
 
@@ -369,6 +369,7 @@ class ImageSequence(Asset):
             nkcmd.render_for_ingest(
                 input_path = self.path,
                 output_path = str(output),
+                mov_type = mov_type,
                 start_frame = self.start - 1, # Acomodate for the slate
                 end_frame = self.end,
                 width = res_x,
