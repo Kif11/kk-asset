@@ -354,6 +354,9 @@ class ImageSequence(Asset):
         print # Empty line
 
     def generate_mov(self, output, mov_type, width='', height='', lut='', user='', handles='', description=''):
+        """
+        DEPRICATED
+        """
 
         nkcmd = NukeCmd()
 
