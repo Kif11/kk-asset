@@ -3,6 +3,7 @@ from pathlib import Path
 from nkcmd import NukeCmd
 from logger import Logger
 from errors import *
+import utils
 
 import subprocess
 import yaml
@@ -343,8 +344,16 @@ class ImageSequence(Asset):
             old_path = str(self.path) % old_frame
             new_path = str(dst) % new_frame
 
-            # Copy ...
-            shutil.copy(old_path, new_path)
+            # Attemt to copy frame with system specific command
+            # such as cp and xcopy. Fall back to shutil if fails
+            try:
+                utils.system_copy(old_path, new_path)
+            except Exception as e:
+                log.warning(
+                    'Unable to execute fast system copy. '
+                    'Fall back on python shutil copy.'
+                )
+                shutil.copy(old_path, new_path)
 
             # Print feedback to the console
             sys.stdout.write("\r[+] Done %d out of %d frames" % (i+1, self.frame_count))
