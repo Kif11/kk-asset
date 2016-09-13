@@ -2,7 +2,7 @@ from fileseq import FileSequence
 from pathlib import Path
 from nkcmd import NukeCmd
 from logger import Logger
-from errors import *
+from errors import InvalidSequenceError, BrokenSequenceError
 import utils
 
 import subprocess
@@ -104,6 +104,11 @@ class Asset(object):
         self._ffmpeg = Path(ffmpeg_dir, 'ffmpeg')
         self._ffprobe = Path(ffmpeg_dir, 'ffprobe')
 
+        # Corresponding shotgun metadata for this asset
+        self.sg_data = {}
+        # Dicionary of extra attributes to pass allong with asset
+        self.extra_attrs = {}
+
     @property
     def type(self):
         return self.__class__.__name__
@@ -179,7 +184,7 @@ class Asset(object):
             result = subprocess.check_output(cmd)
             output = json.loads(result)
         except subprocess.CalledProcessError as e:
-            log.error('ffprobe failed to extract information about the asset')
+            log.error('ffprobe failed to extract information about the asset. %s' % e)
             log.debug('Test this command: %s' % ' '.join(cmd))
             raise
         except Exception:
@@ -205,6 +210,8 @@ class Asset(object):
 
     def copy(self, dst):
 
+        dst = Path(dst)
+
         if dst.exists():
             log.warning('Local file %s already exists' % dst.name)
             return
@@ -226,6 +233,8 @@ class ImageSequence(Asset):
         super(self.__class__, self).__init__(path)
         path = Path(path)
         seqs = FileSequence.findSequencesOnDisk(str(path))
+
+        self.sequence_data = None
 
         if len(seqs) == 1:
             self.seq = seqs[0]
@@ -285,9 +294,21 @@ class ImageSequence(Asset):
 
         return path
 
+    @property
+    def width(self):
+        return self.resolution()[0]
+
+    @property
+    def height(self):
+        return self.resolution()[1]
+
     def resolution(self):
-        data = self.get_media_info(str(self.frame_path(self.start)))
-        resolution = (data['width'], data['height'])
+        if self.sequence_data is None:
+            data = self.get_media_info(str(self.frame_path(self.start)))
+            self.sequence_data = data
+        else:
+            data = self.sequence_data
+        resolution = (int(data['width']), int(data['height']))
         return resolution
 
     @property
@@ -350,8 +371,8 @@ class ImageSequence(Asset):
                 utils.system_copy(old_path, new_path)
             except Exception as e:
                 log.warning(
-                    'Unable to execute fast system copy. '
-                    'Fall back on python shutil copy.'
+                    'Unable to execute fast system copy. %s'
+                    'Fall back on python shutil copy.' % e
                 )
                 shutil.copy(old_path, new_path)
 
@@ -450,6 +471,8 @@ class VideoFile(Asset):
     def __init__(self, path):
         super(self.__class__, self).__init__(path)
 
+        self.mov_data = None
+
     @property
     def start(self):
         return 1
@@ -473,8 +496,19 @@ class VideoFile(Asset):
     def thumbnail(self):
         return None
 
+    @property
+    def width(self):
+        return self.resolution()[0]
+
+    @property
+    def height(self):
+        return self.resolution()[1]
+
     def resolution(self):
-        # import pdb; pdb.set_trace()
-        data = self.get_media_info(str(self.path))
-        resulution = (int(data['width']), int(data['height']))
-        return resulution
+        if self.mov_data is None:
+            data = self.get_media_info(str(self.path))
+            self.mov_data = data
+        else:
+            data = self.mov_data
+        resolution = (int(data['width']), int(data['height']))
+        return resolution
