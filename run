@@ -6,13 +6,18 @@ export PYTHONPATH=$CURDIR:/EEP/Tools/Settings/shotgun/bolden_kkdev/install/core/
 
 COMMAND="$1"
 
-if [ "$COMMAND" = "run" ]
+if [ "$COMMAND" = "" ]
 then
     python ./asset.py
 
-elif [ "$COMMAND" = "test" ]
+elif [ "$COMMAND" = "test_simple" ]
 then
     python ./tests/simple_test.py
+
+elif [ "$COMMAND" = "test_unit" ]
+then
+    shift
+    python ./tests/unit_test.py $@
 
 else
     echo "Command is unknown"

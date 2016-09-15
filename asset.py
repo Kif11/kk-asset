@@ -1,6 +1,5 @@
 from fileseq import FileSequence
 from pathlib import Path
-from nkcmd import NukeCmd
 from logger import Logger
 from errors import InvalidSequenceError, BrokenSequenceError
 import utils
@@ -343,116 +342,81 @@ class ImageSequence(Asset):
         thumbnail_path = self.frame_path(self.start)
         return thumbnail_path
 
-    def copy(self, dst, new_start_frame=1):
+    def copy(self, dst, start_offset=0, new_start_frame=None, override=False):
+        """
+        Copy ImageSequence to the target destination frame by frame
+
+        :return: New FileSequnce asset object
+        """
 
         dst = Path(dst)
 
-        if dst.parent.exists():
-            # raise Exception ('%s already exist' % dst)
-            log.warning('Local sequence %s already exists' % dst.name)
-            return
-
-        dst.parent.mkdir(parents=True)
+        # Create parent folder if not exists
+        if not dst.parent.exists():
+            dst.parent.mkdir(parents=True)
 
         log.info('Copy %s to %s' % (self.path, dst))
 
-        old_frame = self.start
+        skipped_frames = []
+        warnings = set()
+
+        if new_start_frame is None:
+            new_start_frame = self.start
+
+        old_frame = self.start + start_offset
+        dst_frame_count = self.frame_count - start_offset
         # Copy sequence to the publish folder frame by frame
         # Alway start from frame 1001
-        for i in range(0, self.frame_count):
+        for i in range(0, dst_frame_count):
             new_frame = new_start_frame + i
 
             old_path = str(self.path) % old_frame
             new_path = str(dst) % new_frame
+
+            new_path_p = Path(new_path)
+            # Sckip frane if already exists
+            if new_path_p.exists() and not override:
+                skipped_frames.append(new_path_p)
+                continue
 
             # Attemt to copy frame with system specific command
             # such as cp and xcopy. Fall back to shutil if fails
             try:
                 utils.system_copy(old_path, new_path)
             except Exception as e:
-                log.warning(
-                    'Unable to execute fast system copy. %s'
-                    'Fall back on python shutil copy.' % e
+                msg = (
+                    'Unable to execute fast system copy. %s. '
+                    'Default python shutil copy were used.' % e
                 )
+                warnings.add(msg)
+
                 shutil.copy(old_path, new_path)
 
             # Print feedback to the console
-            sys.stdout.write("\r[+] Done %d out of %d frames" % (i+1, self.frame_count))
+            sys.stdout.write("\r[+] Done %d out of %d frames" % (i+1, dst_frame_count))
             sys.stdout.flush()
 
             old_frame += 1
+
         print # Empty line
 
-    def generate_mov(self, output, mov_type, width='', height='', lut='', user='', handles='', description=''):
-        """
-        DEPRICATED
-        """
-
-        nkcmd = NukeCmd()
-
-        res_x, res_y = self.resolution()
-
-        # Create parent directory
-        if not output.parent.exists():
-            output.parent.mkdir()
-
-        # Render an MOV for this sequence
-        if not output.exists():
-            log.info('Starting rendering preview MOV...')
-            nkcmd.render_for_ingest(
-                input_path = self.path,
-                output_path = str(output),
-                mov_type = mov_type,
-                start_frame = self.start - 1, # Acomodate for the slate
-                end_frame = self.end,
-                width = res_x,
-                height = res_y,
-                lut = lut,
-                # shot_name = 'arg_temp',
-                file_name = output.name,
-                # shot_version = 'arg_temp',
-                # uid = 'arg_temp',
-                # fps = 'arg_temp',
-                # frame_range = 'arg_temp',
-                # frame_total = 'arg_temp',
-                handles = handles,
-                # comp_resolution = 'arg_temp',
-                # date = 'arg_temp',
-                user_name = user,
-                description = description
+        # Check all of the events happened during copying
+        #
+        if skipped_frames:
+            log.warning(
+                'Copy of some of the frames were skipped because they '
+                'were alredy present in the target destination.'
             )
-        else:
-            log.warning('Local file %s already exists' % output.name)
+            # log.debug([i.name for i in skipped_frames])
 
-        asset = asset_from_path(output)
+        if warnings:
+            log.warning('Some warning were raised during copying: ')
+            for i, w in enumerate(warnings):
+                log.warning('\t%02d: %s' % (i+1, w))
 
-        return asset
+        new_sequence_asset = asset_from_path(new_path_p.parent)
 
-    def generate_proxy(self, output, width='', height=''):
-
-        nkcmd = NukeCmd()
-
-        output = Path(output)
-
-        if not output.parent.exists():
-            output.parent.mkdir(parents=True)
-
-            log.info('Starting rendering proxy DPX')
-            nkcmd.render_for_ingest(
-                input_path = self.path,
-                output_path = str(output),
-                start_frame = self.start,
-                end_frame = self.end,
-                width = width,
-                height = height,
-                description = 'Proxy sequence',
-            )
-        else:
-            log.warning('Local path %s already exists' % output)
-
-        asset = asset_from_path(output.parent)
-
-        return asset
+        return new_sequence_asset
 
 class LocalFile(Asset):
     """
