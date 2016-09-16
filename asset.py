@@ -13,6 +13,7 @@ import os
 import re
 
 log = Logger(debug=True)
+debug = False
 
 ################################################################################
 # Configuration
@@ -107,6 +108,10 @@ class Asset(object):
         self.sg_data = {}
         # Dicionary of extra attributes to pass allong with asset
         self.extra_attrs = {}
+
+        # Determine the difference between the first and the second frame when
+        # detecting a slate. The lover the value the more sensitive it to changes
+        self.slate_threshold = 0.2
 
     @property
     def type(self):
@@ -277,22 +282,6 @@ class ImageSequence(Asset):
     def path(self):
         return Path(self.seq.path())
 
-    def _get_temp_file_path(self):
-
-        if sys.platform == 'darwin':
-            user_name = os.environ['USER']
-            path = Path('/EEP/Home/%s/.tmp' % user_name)
-        elif sys.platform == 'win32':
-            user_name = os.environ['USERNAME']
-            path = Path('C:/Users/%s/AppData/Local/.tmp' % user_name)
-        else:
-            log.error('Can not retrive image data temp file path for the %s OS' % sys.platform)
-            path = Path('.tmp')
-        if not path.parent.exists():
-            path.parent.mkdir()
-
-        return path
-
     @property
     def width(self):
         return self.resolution()[0]
@@ -341,6 +330,47 @@ class ImageSequence(Asset):
     def thumbnail(self):
         thumbnail_path = self.frame_path(self.start)
         return thumbnail_path
+
+    def has_slate(self):
+        """
+        Detect a slate on the first frame of the image sequence
+        by using scene change analysis ffprobe filter
+
+        :returns: (bool) True is image sequence has a slate
+        """
+        first_frame=str(self.path) % self.start
+        second_frame=str(self.path) % (self.start + 1)
+        first_frame = first_frame.replace('\\', '/')
+        second_frame = second_frame.replace('\\', '/')
+        # Because I did not find a way to probe an image sequence that starts
+        # with arbitrary frame number I concatenate the first two frames
+        # together to form a video stream. Then I pass this video stream
+        # to scene change detect filter
+        image_filter = (
+            'movie={first_frame} [img1]; '
+            'movie={second_frame} [img2]; '
+            '[img1] [img2] concat [out]; '
+            '[out] select=gt(scene\,{slate_threshold})'
+        ).format(
+            first_frame=first_frame,
+            second_frame=second_frame,
+            slate_threshold=self.slate_threshold
+        )
+
+        cmd = [
+            str(self._ffprobe), '-show_frames', '-v', 'quiet', '-read_intervals',
+            '%+#3', '-print_format', 'json', '-f', 'lavfi', image_filter
+        ]
+
+        if debug: cmd.pop(2); cmd.pop(2)
+
+        result = subprocess.check_output(cmd)
+        frames = json.loads(result).get('frames', '')
+
+        if frames and float(frames[0]['pkt_dts_time']) < 1:
+            return True
+        else:
+            return False
 
     def copy(self, dst, start_offset=0, new_start_frame=None, override=False):
         """
@@ -476,3 +506,32 @@ class VideoFile(Asset):
             data = self.mov_data
         resolution = (int(data['width']), int(data['height']))
         return resolution
+
+    def has_slate(self):
+        """
+        Detect a slate on the first frame of the video
+        by using scene change analysis ffprobe filter
+
+        :returns: (bool) True is video has a slate
+        """
+        mov_path = str(self.path).replace('\\', '/')
+
+        image_filter = (
+            'movie={mov_path}, '
+            'select=gt(scene\,{slate_threshold})'
+        ).format(mov_path=mov_path, slate_threshold=self.slate_threshold)
+
+        cmd = [
+            str(self._ffprobe), '-show_frames', '-v', 'quiet', '-read_intervals',
+            '%+#3', '-print_format', 'json', '-f', 'lavfi', image_filter
+        ]
+
+        if debug: cmd.pop(2); cmd.pop(2)
+
+        result = subprocess.check_output(cmd)
+        frames = json.loads(result).get('frames', '')
+
+        if frames and float(frames[0]['pkt_dts_time']) < 1:
+            return True
+        else:
+            return False
