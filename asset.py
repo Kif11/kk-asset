@@ -18,8 +18,7 @@ debug = False
 ################################################################################
 # Configuration
 ################################################################################
-
-global config # Module configuration from config.yml
+global config  # Module configuration from config.yml
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 config_file = Path(script_dir, 'config.yml')
@@ -34,6 +33,7 @@ video_files_formats = config['video_files_formats']
 ################################################################################
 # Factory functions
 ################################################################################
+
 
 def asset_from_path(path):
     """
@@ -65,6 +65,7 @@ def asset_from_path(path):
 ################################################################################
 # Classes
 ################################################################################
+
 
 class Asset(object):
     """
@@ -182,7 +183,10 @@ class Asset(object):
         return fields
 
     def get_media_info(self, path):
-        cmd = [str(self._ffprobe), '-v', 'quiet', '-select_streams', 'v', '-show_streams', '-print_format', 'json', str(path)]
+        cmd = [
+            str(self._ffprobe), '-v', 'quiet', '-select_streams', 'v',
+            '-show_streams', '-print_format', 'json', str(path)
+        ]
 
         try:
             result = subprocess.check_output(cmd)
@@ -245,7 +249,7 @@ class ImageSequence(Asset):
 
             # Check for broken sequnces
             if len(self.seq.frameSet().__str__().split(',')) != 1:
-                raise BrokenSequenceError (
+                raise BrokenSequenceError(
                     'Sequence broken and has missing frames: %s'
                     % self.seq.frameSet()
                 )
@@ -338,8 +342,8 @@ class ImageSequence(Asset):
 
         :returns: (bool) True is image sequence has a slate
         """
-        first_frame=str(self.path) % self.start
-        second_frame=str(self.path) % (self.start + 1)
+        first_frame = str(self.path) % self.start
+        second_frame = str(self.path) % (self.start + 1)
         first_frame = first_frame.replace('\\', '/')
         second_frame = second_frame.replace('\\', '/')
         # Because I did not find a way to probe an image sequence that starts
@@ -362,7 +366,9 @@ class ImageSequence(Asset):
             '%+#3', '-print_format', 'json', '-f', 'lavfi', image_filter
         ]
 
-        if debug: cmd.pop(2); cmd.pop(2)
+        if debug:
+            cmd.pop(2)
+            cmd.pop(2)
 
         result = subprocess.check_output(cmd)
         frames = json.loads(result).get('frames', '')
@@ -423,12 +429,14 @@ class ImageSequence(Asset):
                 shutil.copy(old_path, new_path)
 
             # Print feedback to the console
-            sys.stdout.write("\r[+] Done %d out of %d frames" % (i+1, dst_frame_count))
+            sys.stdout.write(
+                "\r[+] Done %d out of %d frames" % (i+1, dst_frame_count)
+            )
             sys.stdout.flush()
 
             old_frame += 1
 
-        print # Empty line
+        print  # Empty line
 
         # Check all of the events happened during copying
         #
@@ -448,6 +456,7 @@ class ImageSequence(Asset):
 
         return new_sequence_asset
 
+
 class LocalFile(Asset):
     """
     Represent a local file that wont encompassed by other
@@ -456,6 +465,7 @@ class LocalFile(Asset):
 
     def __init__(self, path):
         super(self.__class__, self).__init__(path)
+
 
 class VideoFile(Asset):
     """
@@ -526,7 +536,9 @@ class VideoFile(Asset):
             '%+#3', '-print_format', 'json', '-f', 'lavfi', image_filter
         ]
 
-        if debug: cmd.pop(2); cmd.pop(2)
+        if debug:
+            cmd.pop(2)
+            cmd.pop(2)
 
         result = subprocess.check_output(cmd)
         frames = json.loads(result).get('frames', '')
