@@ -160,8 +160,8 @@ class Asset(object):
         asset core_name
         returns: Dictionary of template name and name values
         """
-        # Find non token delimeters such as '_', '.', '_v'
-        # Everythin in between }...{
+        # Find non token delimiters such as '_', '.', '_v'
+        # Everything in between }...{
         delimeters = re.findall(r'}([a-zA-Z-_.]+){', name_template)
         # Find all {...} tokens
         tokens = re.findall(r'{([a-z]+)}', name_template)
@@ -229,8 +229,8 @@ class Asset(object):
 
 class ImageSequence(Asset):
     """
-    Repreresent any image or file sequence
-    Do not instanciate directly. Use factory methods such as asset_from_path.
+    Represent any image or file sequence
+    Do not instantiate directly. Use factory methods such as asset_from_path.
     """
 
     def __init__(self, path):
@@ -404,12 +404,12 @@ class ImageSequence(Asset):
             new_path = str(dst) % new_frame
 
             new_path_p = Path(new_path)
-            # Sckip frane if already exists
+            # Skip frame if already exists
             if new_path_p.exists() and not override:
                 skipped_frames.append(new_path_p)
                 continue
 
-            # Attemt to copy frame with system specific command
+            # Attempt to copy frame with system specific command
             # such as cp and xcopy. Fall back to shutil if fails
             try:
                 utils.system_copy(old_path, new_path)
