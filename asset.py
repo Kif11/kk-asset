@@ -442,8 +442,9 @@ class ImageSequence(Asset):
         #
         if skipped_frames:
             log.warning(
-                'Copy of some of the frames were skipped because they '
+                'Sequence %s. Copy of some of the frames were skipped because they '
                 'were alredy present in the target destination.'
+                % self.name
             )
             # log.debug([i.name for i in skipped_frames])
 
