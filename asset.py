@@ -344,8 +344,12 @@ class ImageSequence(Asset):
         """
         first_frame = str(self.path) % self.start
         second_frame = str(self.path) % (self.start + 1)
-        first_frame = first_frame.replace('\\', '/')
-        second_frame = second_frame.replace('\\', '/')
+
+        # Alway pass forward slashed path to ffmpeg also replace ':' with
+        # double escaped //: for windows paths
+        first_frame = first_frame.replace('\\', '/').replace(':', '\\\\:')
+        second_frame = second_frame.replace('\\', '/').replace(':', '\\\\:')
+
         # Because I did not find a way to probe an image sequence that starts
         # with arbitrary frame number I concatenate the first two frames
         # together to form a video stream. Then I pass this video stream
@@ -526,6 +530,7 @@ class VideoFile(Asset):
         :returns: (bool) True is video has a slate
         """
         mov_path = str(self.path).replace('\\', '/')
+        mov_path = mov_path.replace(':', '\\\\:')
 
         image_filter = (
             'movie={mov_path}, '
