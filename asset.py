@@ -114,6 +114,8 @@ class Asset(object):
         # detecting a slate. The lover the value the more sensitive it to changes
         self.slate_threshold = 0.2
 
+        self.tmp_files = []
+
     @property
     def type(self):
         return self.__class__.__name__
@@ -154,6 +156,33 @@ class Asset(object):
     def extension(self):
         ext = str(self.path.suffix).lstrip('.')
         return ext
+
+    def _get_tmp_dir(self):
+        tmp = None
+        if sys.platform == 'darwin' or 'linux' in sys.platform:
+            tmp = os.path.abspath(os.environ.get('TMPDIR'))
+        elif sys.platform == 'win32':
+            tmp = os.path.abspath(os.environ.get('TEMP')).replace(os.sep, '/')
+            # On Windows, some usernames are shortened with a tilde.
+            # Example: EVILEY~1 instead of evileye_52
+            import getpass
+            tmp = tmp.split('/')
+            for item in tmp:
+                if '~1' in item:
+                    tmp[tmp.index(item)] = getpass.getuser()
+            tmp = '/'.join(tmp)
+        return Path(tmp)
+
+    def _get_tmp_file(self, name):
+        tmp_dir = self._get_tmp_dir()
+        temp_file_path = Path(tmp_dir, name)
+        self.tmp_files.append(temp_file_path)
+        return temp_file_path
+
+    def remove_tmp_files(self):
+        for f in self.tmp_files:
+            if f.exists():
+                f.unlink()
 
     def fields_from_name(self, name_template):
         """
@@ -382,6 +411,29 @@ class ImageSequence(Asset):
         else:
             return False
 
+    def generate_thumbnail(self, x_size=320, y_size=-1):
+        middle_frame = str(self.path) % (self.start + (self.frame_count / 2))
+        middle_frame = middle_frame.replace('\\', '/').replace(':', '\\\\:')
+        tmp_thumb = self._get_tmp_file('%s_tmp_thumb.png' % self.base_name)
+        filters = 'scale=%s:%s' % (x_size, y_size)
+        cmd = [
+            str(self._ffmpeg), '-v', 'quiet', '-i', str(middle_frame), '-vf', filters, str(tmp_thumb)
+        ]
+        if debug:
+            cmd.pop(1)
+            cmd.pop(1)
+        try:
+            exit_status = subprocess.call(cmd)
+        except Exception as e:
+            log.error('Failed to generate thumbnail. %s' % e)
+            return None
+
+        if exit_status != 0:
+            log.error('Failed to generate thumbnail.')
+            return None
+
+        return tmp_thumb
+
     def copy(self, dst, start_offset=0, new_start_frame=None, override=False):
         """
         Copy ImageSequence to the target destination frame by frame
@@ -521,6 +573,28 @@ class VideoFile(Asset):
             data = self.mov_data
         resolution = (int(data['width']), int(data['height']))
         return resolution
+
+    def generate_thumbnail(self, x_size=320, y_size=-1):
+
+        tmp_thumb = self._get_tmp_file('%s_tmp_thumb.png' % self.base_name)
+        filters = 'scale=%s:%s' % (x_size, y_size)
+        cmd = [
+            str(self._ffmpeg), '-v', 'quiet', '-i', str(self.path), '-vframes', '1', '-vf', filters, str(tmp_thumb)
+        ]
+        if debug:
+            cmd.pop(1)
+            cmd.pop(1)
+        try:
+            exit_status = subprocess.call(cmd)
+        except Exception as e:
+            log.error('Failed to generate thumbnail. %s' % e)
+            return None
+
+        if exit_status != 0:
+            log.error('Failed to generate thumbnail.')
+            return None
+
+        return tmp_thumb
 
     def has_slate(self):
         """
