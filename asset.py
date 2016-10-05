@@ -245,9 +245,14 @@ class Asset(object):
 
         return stream
 
-    def copy(self, dst):
+    def copy(self, dst, dry_run=False):
 
         dst = Path(dst)
+
+        if dry_run:
+            log.info('Dry run mode is active!')
+            log.info('Copy %s to %s' % (self.path, dst))
+            return
 
         if dst.exists():
             log.warning('Local file %s already exists' % dst.name)
@@ -434,7 +439,7 @@ class ImageSequence(Asset):
 
         return tmp_thumb
 
-    def copy(self, dst, start_offset=0, new_start_frame=None, override=False):
+    def copy(self, dst, start_offset=0, new_start_frame=None, override=False, dry_run=False):
         """
         Copy ImageSequence to the target destination frame by frame
 
@@ -469,6 +474,12 @@ class ImageSequence(Asset):
             # Skip frame if already exists
             if new_path_p.exists() and not override:
                 skipped_frames.append(new_path_p)
+                continue
+
+            if dry_run:
+                log.info('Dry run mode is active')
+                log.info('Copy %s to %s' % (old_path, new_path))
+                old_frame += 1
                 continue
 
             # Attempt to copy frame with system specific command
@@ -517,11 +528,30 @@ class ImageSequence(Asset):
 class LocalFile(Asset):
     """
     Represent a local file that wont encompassed by other
-    more specific classes
+    more specific classes. Can be a single image
     """
 
     def __init__(self, path):
         super(self.__class__, self).__init__(path)
+        self.file_data = None
+
+    @property
+    def width(self):
+        return self.resolution()[0]
+
+    @property
+    def height(self):
+        return self.resolution()[1]
+
+    def resolution(self):
+        if self.file_data is None:
+            data = self.get_media_info(str(self.path))
+            self.file_data = data
+        else:
+            data = self.file_data
+        resolution = (int(data['width']), int(data['height']))
+
+        return resolution
 
 
 class VideoFile(Asset):
