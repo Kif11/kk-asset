@@ -5,8 +5,11 @@ ffmpeg_dir:
   win: //gin.eep.com/Tools/Settings/shotgun/bolden_kkdev/install/core/resources/ffmpeg/win32
   linux: /EEP/Tools/Settings/shotgun/bolden_kkdev/install/core/resources/ffmpeg/linux2
 
-# Supported video files extensions
+# Supported video files formats
 video_files_formats: ['mov', 'mp4', 'mkv']
+
+# Supported image files firmats
+image_files_formats: ['jpg', 'jpeg', 'tif', 'tiff', 'exr', 'png', 'dpx']
 
 # Regular expression partern to use
 # for retriving version number from a file name

@@ -29,6 +29,7 @@ with config_file.open('r') as f:
 
 # Cache some configuration variables
 video_files_formats = config['video_files_formats']
+image_files_formats = config['image_files_formats']
 
 ################################################################################
 # Factory functions
@@ -54,6 +55,8 @@ def asset_from_path(path):
         asset = ImageSequence(path)
     elif path.suffix.lstrip('.') in video_files_formats:
         asset = VideoFile(path)
+    elif path.suffix.lstrip('.') in image_files_formats:
+        asset = ImageFile(path)
     elif path.is_file():
         asset = LocalFile(path)
     else:
@@ -157,6 +160,22 @@ class Asset(object):
         ext = str(self.path.suffix).lstrip('.')
         return ext
 
+    @property
+    def start(self):
+        return 1
+
+    @property
+    def end(self):
+        return 1
+
+    @property
+    def frame_range(self):
+        return '1-1'
+
+    @property
+    def frame_count(self):
+        return 1
+
     def _get_tmp_dir(self):
         tmp = None
         if sys.platform == 'darwin' or 'linux' in sys.platform:
@@ -178,6 +197,9 @@ class Asset(object):
         temp_file_path = Path(tmp_dir, name)
         self.tmp_files.append(temp_file_path)
         return temp_file_path
+
+    def has_slate(self):
+        return False
 
     def remove_tmp_files(self):
         for f in self.tmp_files:
@@ -263,6 +285,10 @@ class Asset(object):
 
         log.info('Copy %s to %s' % (self.path, dst))
         shutil.copy(str(self.path), str(dst))
+
+        new_file_asset = asset_from_path(dst)
+
+        return new_file_asset
 
 
 class ImageSequence(Asset):
@@ -525,12 +551,10 @@ class ImageSequence(Asset):
         return new_sequence_asset
 
 
-class LocalFile(Asset):
+class ImageFile(Asset):
     """
-    Represent a local file that wont encompassed by other
-    more specific classes. Can be a single image
+    Represent a local video single image file
     """
-
     def __init__(self, path):
         super(self.__class__, self).__init__(path)
         self.file_data = None
@@ -657,3 +681,13 @@ class VideoFile(Asset):
             return True
         else:
             return False
+
+
+class LocalFile(Asset):
+    """
+    Represent a local file that wont encompassed by other
+    more specific classes. Can be a single image
+    """
+
+    def __init__(self, path):
+        super(self.__class__, self).__init__(path)
