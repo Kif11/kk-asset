@@ -162,11 +162,19 @@ class Asset(object):
 
     @property
     def start(self):
-        return 1
+        frame_number = re.findall(re.compile('\.(\d+)\.\w+'), str(self.name))
+        if frame_number:
+            return int(frame_number[0])
+        else:
+            return 1
 
     @property
     def end(self):
-        return 1
+        frame_number = re.findall(re.compile('\.(\d+)\.\w+'), str(self.name))
+        if frame_number:
+            return int(frame_number[0])
+        else:
+            return 1
 
     @property
     def frame_range(self):
@@ -576,6 +584,27 @@ class ImageFile(Asset):
         resolution = (int(data['width']), int(data['height']))
 
         return resolution
+
+    def generate_thumbnail(self, x_size=320, y_size=-1):
+        tmp_thumb = self._get_tmp_file('%s_tmp_thumb.png' % self.base_name)
+        filters = 'scale=%s:%s' % (x_size, y_size)
+        cmd = [
+            str(self._ffmpeg), '-v', 'quiet', '-i', str(self.path), '-vf', filters, str(tmp_thumb)
+        ]
+        if debug:
+            cmd.pop(1)
+            cmd.pop(1)
+        try:
+            exit_status = subprocess.call(cmd)
+        except Exception as e:
+            log.error('Failed to generate thumbnail. %s' % e)
+            return None
+
+        if exit_status != 0:
+            log.error('Failed to generate thumbnail.')
+            return None
+
+        return tmp_thumb
 
 
 class VideoFile(Asset):
