@@ -286,7 +286,8 @@ class Asset(object):
 
         if dst.exists():
             log.warning('Local file %s already exists' % dst.name)
-            return
+            new_file_asset = asset_from_path(dst)
+            return new_file_asset
 
         if not dst.parent.exists():
             dst.parent.mkdir(parents=True)
