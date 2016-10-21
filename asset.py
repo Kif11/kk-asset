@@ -1,10 +1,11 @@
 from fileseq import FileSequence
 from pathlib import Path
-from logger import Logger
+# from logger import Logger
 from errors import InvalidSequenceError, BrokenSequenceError
 import utils
 
 import subprocess
+import logging
 import yaml
 import shutil
 import json
@@ -12,12 +13,11 @@ import sys
 import os
 import re
 
-log = Logger(debug=True)
-debug = False
-
 ################################################################################
 # Configuration
 ################################################################################
+debug = False
+
 global config  # Module configuration from config.yml
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -31,10 +31,14 @@ with config_file.open('r') as f:
 video_files_formats = config['video_files_formats']
 image_files_formats = config['image_files_formats']
 
+log = logging.getLogger(__name__)
+def set_logger(logger):
+    global log
+    log = logger
+
 ################################################################################
 # Factory functions
 ################################################################################
-
 
 def asset_from_path(path):
     """
@@ -84,8 +88,8 @@ class Asset(object):
             raise Exception('Specified path does not exist: %s' % path)
         self._path = path
 
-        # Regular expression partern to use
-        # for retriving version number from a file name
+        # Regular expression pattern to use
+        # for retrieving version number from a file name
         self.version_patterns = config['versions_regex']
 
         # Determine ffmpeg and ffprobe paths
@@ -497,6 +501,7 @@ class ImageSequence(Asset):
 
         old_frame = self.start + start_offset
         dst_frame_count = self.frame_count - start_offset
+        copied = False
         # Copy sequence to the publish folder frame by frame
         # Alway start from frame 1001
         for i in range(0, dst_frame_count):
@@ -521,6 +526,7 @@ class ImageSequence(Asset):
             # such as cp and xcopy. Fall back to shutil if fails
             try:
                 utils.system_copy(old_path, new_path)
+                copied = True
             except Exception as e:
                 msg = (
                     'Unable to execute fast system copy. %s. '
@@ -529,6 +535,7 @@ class ImageSequence(Asset):
                 warnings.add(msg)
 
                 shutil.copy(old_path, new_path)
+                copied = True
 
             # Print feedback to the console
             sys.stdout.write(
@@ -538,7 +545,8 @@ class ImageSequence(Asset):
 
             old_frame += 1
 
-        print  # Empty line
+        if copied:
+            print  # Empty line
 
         # Check all of the events happened during copying
         #
