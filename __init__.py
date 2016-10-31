@@ -9,5 +9,6 @@ except ImportError:
 
 logging.getLogger().addHandler(NullHandler())
 
+from asset import Asset
 from asset import asset_from_path
 from asset import set_logger
