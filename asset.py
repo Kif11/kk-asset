@@ -504,6 +504,7 @@ class ImageSequence(Asset):
         copied = False
         # Copy sequence to the publish folder frame by frame
         # Alway start from frame 1001
+        log.info('Starting copy for %s frames total' % dst_frame_count)
         for i in range(0, dst_frame_count):
             new_frame = new_start_frame + i
 
@@ -511,9 +512,11 @@ class ImageSequence(Asset):
             new_path = str(dst) % new_frame
 
             new_path_p = Path(new_path)
+
             # Skip frame if already exists
             if new_path_p.exists() and not override:
-                skipped_frames.append(new_path_p)
+                # skipped_frames.append(new_path_p)
+                log.info('Frame %d already exists' % (i+1))
                 continue
 
             if dry_run:
@@ -536,26 +539,23 @@ class ImageSequence(Asset):
 
                 shutil.copy(old_path, new_path)
                 copied = True
-
+            log.info('Frame %d copied' % (i+1))
             # Print feedback to the console
-            sys.stdout.write(
-                "\r[+] Done %d out of %d frames" % (i+1, dst_frame_count)
-            )
-            sys.stdout.flush()
+            # log.info("Copied %d out of %d frames" % (i+1, dst_frame_count))
 
             old_frame += 1
 
-        if copied:
-            print  # Empty line
+        # if copied:
+        #     print  # Empty line
 
         # Check all of the events happened during copying
         #
-        if skipped_frames:
-            log.warning(
-                'Sequence %s. Copy of some of the frames were skipped because they '
-                'were alredy present in the target destination.'
-                % self.name
-            )
+        # if skipped_frames:
+        #     log.warning(
+        #         'Sequence %s. Copy of some of the frames were skipped because they '
+        #         'were already present in the target destination.'
+        #         % self.name
+        #     )
             # log.debug([i.name for i in skipped_frames])
 
         if warnings:
