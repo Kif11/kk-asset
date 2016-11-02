@@ -461,7 +461,7 @@ class ImageSequence(Asset):
         tmp_thumb = self._get_tmp_file('%s_tmp_thumb.png' % self.base_name)
         filters = 'scale=%s:%s' % (x_size, y_size)
         cmd = [
-            str(self._ffmpeg), '-v', 'quiet', '-i', str(middle_frame), '-vf', filters, str(tmp_thumb)
+            str(self._ffmpeg), '-v', 'quiet', '-i', str(middle_frame), '-y', '-vf', filters, str(tmp_thumb)
         ]
         if debug:
             cmd.pop(1)
@@ -598,7 +598,7 @@ class ImageFile(Asset):
         tmp_thumb = self._get_tmp_file('%s_tmp_thumb.png' % self.base_name)
         filters = 'scale=%s:%s' % (x_size, y_size)
         cmd = [
-            str(self._ffmpeg), '-v', 'quiet', '-i', str(self.path), '-vf', filters, str(tmp_thumb)
+            str(self._ffmpeg), '-v', 'quiet', '-i', str(self.path), '-y', '-vf', filters, str(tmp_thumb)
         ]
         if debug:
             cmd.pop(1)
