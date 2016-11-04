@@ -224,13 +224,21 @@ class Asset(object):
         asset core_name
         returns: Dictionary of template name and name values
         """
+
+        if not name_template:
+            return None
+
         # Find non token delimiters such as '_', '.', '_v'
         # Everything in between }...{
         delimeters = re.findall(r'}([a-zA-Z-_.]+){', name_template)
         # Find all {...} tokens
         tokens = re.findall(r'{([a-z]+)}', name_template)
-        # Split name base on the template separator
-        name_values = re.split(delimeters[0], self.core_name)
+
+        if delimeters:
+            # Split name base on the template separator
+            name_values = re.split(delimeters[0], self.core_name)
+        else:
+            name_values = [self.core_name]
 
         # Check if number of template fields and name values match
         if len(tokens) != len(name_values):
