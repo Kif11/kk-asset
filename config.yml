@@ -14,5 +14,5 @@ image_files_formats: ['jpg', 'jpeg', 'tif', 'tiff', 'exr', 'png', 'dpx']
 # Regular expression partern to use
 # for retriving version number from a file name
 versions_regex:
-  - '(v)(?P<version_number>[0-9]+)' # v001
+  - '([vV])(?P<version_number>[0-9]+)' # v001, V00001
   - '([A-Za-z]+)_(?P<version_number>[0-9]+)' # name_01

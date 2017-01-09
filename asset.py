@@ -114,11 +114,11 @@ class Asset(object):
 
         # Corresponding shotgun metadata for this asset
         self.sg_data = {}
-        # Dicionary of extra attributes to pass allong with asset
+        # Dictionary of extra attributes to pass along with asset
         self.extra_attrs = {}
 
         # Determine the difference between the first and the second frame when
-        # detecting a slate. The lover the value the more sensitive it to changes
+        # detecting a slate. The lower the value the more sensitive it to changes
         self.slate_threshold = 0.2
 
         self.tmp_files = []
@@ -134,14 +134,22 @@ class Asset(object):
     @property
     def version(self):
         """
-        Try to determine file version base on differnt regex paterns
+        Try to determine file version from its name base on different regex patterns
+
+        :returns: None or integer
         """
+        # Return firs matched pattern in self.version_patterns list
         for p in self.version_patterns:
-            result = re.search(p, str(self.base_name))
+            result = re.finditer(p, str(self.base_name))
             if result is not None:
                 # log.debug('Regex version result: %s', result.group('version_number'))
-                version = int(result.group('version_number'))
-                return version
+                version = None
+                # We alway want to use version found at the and of the name
+                # e.g. for name like 'rvb300_match_30mlCamZv03_v006.fbx' we should return 6 not 3
+                for v in result:
+                    version = v.group('version_number')
+
+                return int(version)
 
         return None
 
