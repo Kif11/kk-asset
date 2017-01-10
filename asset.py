@@ -147,9 +147,9 @@ class Asset(object):
                 # We alway want to use version found at the and of the name
                 # e.g. for name like 'rvb300_match_30mlCamZv03_v006.fbx' we should return 6 not 3
                 for v in result:
-                    version = v.group('version_number')
+                    version = int(v.group('version_number'))
 
-                return int(version)
+                return version
 
         return None
 
