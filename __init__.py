@@ -1,3 +1,5 @@
+import os
+
 # Set default logging handler to avoid "No handler found" warnings.
 import logging
 try:  # Python 2.7+
@@ -8,6 +10,10 @@ except ImportError:
             pass
 
 logging.getLogger().addHandler(NullHandler())
+
+if os.environ.get('DEBUG', False):
+    import asset
+    reload(asset)
 
 from asset import Asset
 from asset import asset_from_path

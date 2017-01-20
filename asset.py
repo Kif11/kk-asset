@@ -77,7 +77,7 @@ def asset_from_path(path):
 class Asset(object):
     """
     Base class for all of the local assets
-    Do not instanciate directly. Use factory methods such as asset_from_path.
+    Do not instantiate directly. Use factory methods such as asset_from_path.
     """
     def __init__(self, path):
 
@@ -336,8 +336,8 @@ class ImageSequence(Asset):
         if len(seqs) == 1:
             self.seq = seqs[0]
 
-            # Check for broken sequnces
-            if len(self.seq.frameSet().__str__().split(',')) != 1:
+            # Check for broken sequence
+            if self._is_broken(self.seq):
                 raise BrokenSequenceError(
                     'Sequence broken and has missing frames: %s'
                     % self.seq.frameSet()
@@ -351,6 +351,35 @@ class ImageSequence(Asset):
             raise InvalidSequenceError('Multiple file sequences error!')
         elif len(seqs) == 0:
             raise InvalidSequenceError('No sequences found in the folder %s' % path)
+
+    def _is_broken(self, seq):
+        """
+        Determine if file sequence has missing frames
+
+        :param seq: FileSequence object
+        :returns: True if the sequence has one or more missing frames
+        """
+
+        frame_set = seq.frameSet()
+        prev = seq.start()
+
+        for i, f_num in enumerate(frame_set):
+
+            # Exit the loop before we run out of frames
+            if i == len(frame_set) - 1:
+                break
+
+            cur_frame = frame_set[i]
+            next_frame = frame_set[i+1]
+
+            diff = next_frame - cur_frame
+
+            # Frame is not continues
+            # The sequence is broken
+            if diff > 1:
+                return True
+
+        return False
 
     @property
     def base_name(self):
