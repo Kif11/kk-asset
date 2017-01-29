@@ -1,10 +1,12 @@
 import subprocess
 import sys
 import shutil
-from pathlib import Path
-from logger import Logger
+import logging
 
-log = Logger(debug=True)
+from pathlib import Path
+
+log = logging.getLogger(__name__)
+
 
 def system_copy(src, dst):
     """
