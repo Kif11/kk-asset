@@ -1,4 +1,9 @@
 import os
+import sys
+
+script_dir = os.path.dirname(os.path.realpath(__file__))
+
+sys.path.append(os.path.join(script_dir, 'modules', 'fileseq-1.2.1', 'src'))
 
 # Set default logging handler to avoid "No handler found" warnings.
 import logging

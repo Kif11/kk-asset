@@ -103,11 +103,12 @@ class Asset(object):
             ffmpeg_dir = config['ffmpeg_dir'][platform]
         else:
             ffmpeg_dir = ''
+            log.info('Can not determine ffmpeg path. ')
             log.warning(
-                'Can not determine ffmpeg path.'
                 'Please set FFMPEG_DIR environmental variable '
-                'or specify path in the config.yml'
+                'or specify path in the config.yml. '
             )
+            log.info('Using system ffprobe and ffmpeg.')
 
         self._ffmpeg = Path(ffmpeg_dir, 'ffmpeg')
         self._ffprobe = Path(ffmpeg_dir, 'ffprobe')
@@ -274,13 +275,13 @@ class Asset(object):
             log.error('ffprobe failed to extract information about the asset. %s' % e)
             log.debug('Test this command: %s' % ' '.join(cmd))
             raise
-        except Exception:
-            log.error('Error happened while excuting CMD command.')
+        except Exception as e:
+            log.error('Error happened while executing command. %s' % e)
             log.debug('Test this command: %s' % ' '.join(cmd))
             raise
 
         if not output:
-            log.warning('No media streams are found in %s' % path)
+            log.warning('No media streams were found in %s' % path)
             stream = {}
             return stream
 
@@ -402,7 +403,21 @@ class ImageSequence(Asset):
 
     @property
     def path(self):
-        return Path(self.seq.path())
+        """
+        :returns: (Path) Templated path to the sequence
+        """
+        padding_num = self.seq.getPaddingNum(self.seq.padding())
+        if padding_num > 10:
+            log.warning('To many digits in file sequence frame number. Max is 10')
+
+        path = ''.join([
+            self.seq.dirname(),
+            self.seq.basename(),
+            '%0{0}d'.format(padding_num),
+            self.seq.extension()]
+        )
+
+        return Path(path)
 
     @property
     def width(self):
@@ -589,19 +604,6 @@ class ImageSequence(Asset):
             # log.info("Copied %d out of %d frames" % (i+1, dst_frame_count))
 
             old_frame += 1
-
-        # if copied:
-        #     print  # Empty line
-
-        # Check all of the events happened during copying
-        #
-        # if skipped_frames:
-        #     log.warning(
-        #         'Sequence %s. Copy of some of the frames were skipped because they '
-        #         'were already present in the target destination.'
-        #         % self.name
-        #     )
-            # log.debug([i.name for i in skipped_frames])
 
         if warnings:
             log.warning('Some warning were raised during copying: ')

@@ -1,9 +1,9 @@
 
 # Folder containing ffmpeg and ffprobe
 ffmpeg_dir:
-  mac: /EEP/Tools/Settings/shotgun/bolden_kkdev/install/core/resources/ffmpeg/darwin
-  win: //gin.eep.com/Tools/Settings/shotgun/bolden_kkdev/install/core/resources/ffmpeg/win32
-  linux: /EEP/Tools/Settings/shotgun/bolden_kkdev/install/core/resources/ffmpeg/linux2
+  mac:
+  win:
+  linux:
 
 # Supported video files formats
 video_files_formats: ['mov', 'mp4', 'mkv']

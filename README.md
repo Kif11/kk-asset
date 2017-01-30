@@ -1,2 +1,2 @@
-# eep-asset
-Create an abstraction layer for local assets
+# Asset
+Create an abstraction over local video, images, sequences and other files
